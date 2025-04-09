@@ -3,6 +3,30 @@
 ## Overview
 Esuvi is a sophisticated, AI-powered conversational interface designed with a focus on user experience and extensibility. This project implements a modern web architecture that combines real-time communication capabilities with financial management features, all while maintaining a clean and intuitive user interface.
 
+## Features
+
+### AI Chat Interface
+- Real-time conversation with OpenAI's GPT models
+- Persistent chat history
+- Suggestion-based interaction
+- Customizable model selection (GPT-3.5 Turbo or GPT-4)
+- Adjustable temperature settings for response creativity
+
+### Financial Dashboard
+- Transaction management system
+- Income and expense tracking
+- Category-based organization
+- Real-time financial analytics
+- Monthly financial summaries
+- Persistent data storage
+
+### User Experience
+- Clean, modern interface
+- Responsive design for all devices
+- Tab-based navigation
+- Dark mode aesthetics
+- Intuitive form handling
+
 ## Architecture
 
 ### Frontend Architecture
@@ -54,12 +78,12 @@ Esuvi is a sophisticated, AI-powered conversational interface designed with a fo
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/esuvi-ai.git
+git clone https://github.com/cybersevyn/Esuvi.git
 ```
 
 2. Navigate to the project directory:
 ```bash
-cd esuvi-ai
+cd Esuvi
 ```
 
 3. Open `index.html` in your preferred browser
@@ -77,18 +101,20 @@ cd esuvi-ai
 - Type messages in the input field
 - Use suggestion cards for quick starts
 - View chat history in the sidebar
+- Receive AI-powered responses from OpenAI
 
 ### Financial Dashboard
 - Add income and expenses
 - Categorize transactions
 - Monitor monthly summaries
 - Track financial metrics
+- View transaction history
 
 ## Development
 
 ### Project Structure
 ```
-esuvi-ai/
+Esuvi/
 ├── index.html
 ├── styles.css
 ├── script.js
@@ -111,5 +137,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - The open-source community for inspiration and tools
 
 ## Contact
-Your Name - [@yourtwitter](https://twitter.com/yourtwitter)
-Project Link: [https://github.com/yourusername/esuvi-ai](https://github.com/yourusername/esuvi-ai) # Esuvi
+Project Link: [https://github.com/cybersevyn/Esuvi](https://github.com/cybersevyn/Esuvi) 

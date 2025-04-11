@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esuvi</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-analytics.js"></script>
+    <!-- Application Settings -->
+    <script src="settings.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-ghost logo-icon"></i>
+                <span>Esuvi</span>
+            </div>
+            
+            <button class="sidebar-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <div class="auth-section">
+                <div id="userInfo" class="user-info">
+                    <span id="welcome">Not logged in</span>
+                </div>
+                <div class="auth-buttons">
+                    <button id="loginBtn" class="auth-btn">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                    <button id="logoutBtn" class="auth-btn" style="display: none;">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+            
+            <div class="new-chat">
+                <button id="newChatBtn">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+            </div>
+            
+            <div class="chat-history" id="chatHistory">
+                <!-- Chat history items will be added here dynamically -->
+            </div>
+            
+            <div class="settings">
+                <button id="settingsBtn">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="tabs">
+                <div class="tab active" data-tab="chat">Chat</div>
+                <div class="tab" data-tab="finance">Finance</div>
+            </div>
+            
+            <!-- Chat Tab -->
+            <div class="tab-content active" id="chatTab">
+                <div class="chat-container">
+                    <div class="messages" id="messages">
+                        <div class="welcome-message">
+                            <h1>Esuvi</h1>
+                            <p>Welcome to the void. Ask me anything, and I shall respond from the depths of knowledge.</p>
+                            <div class="suggestions">
+                                <div class="suggestion" data-prompt="Tell me about the nature of consciousness">
+                                    <h3>Consciousness</h3>
+                                    <p>Explore the nature of consciousness</p>
+                                </div>
+                                <div class="suggestion" data-prompt="Explain quantum entanglement">
+                                    <h3>Quantum Entanglement</h3>
+                                    <p>Dive into the mysteries of quantum physics</p>
+                                </div>
+                                <div class="suggestion" data-prompt="Write a dark poem about technology">
+                                    <h3>Dark Poetry</h3>
+                                    <p>Create a poem about technology's dark side</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-container">
+                        <textarea id="userInput" placeholder="Type your message here..." rows="1"></textarea>
+                        <button id="sendBtn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Finance Tab -->
+            <div class="tab-content" id="financeTab">
+                <div class="finance-container">
+                    <div class="finance-header">
+                        <h2>Financial Dashboard</h2>
+                        <div class="finance-summary">
+                            <div class="summary-card">
+                                <h3>Total Balance</h3>
+                                <p id="totalBalance">$0.00</p>
+                            </div>
+                            <div class="summary-card">
+                                <h3>Monthly Income</h3>
+                                <p id="monthlyIncome">$0.00</p>
+                            </div>
+                            <div class="summary-card">
+                                <h3>Monthly Expenses</h3>
+                                <p id="monthlyExpenses">$0.00</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="finance-content">
+                        <div class="finance-form">
+                            <h3>Add Transaction</h3>
+                            <form id="transactionForm">
+                                <div class="form-group">
+                                    <label for="type">Type</label>
+                                    <select id="type" name="type" required>
+                                        <option value="income">Income</option>
+                                        <option value="expense">Expense</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="amount">Amount</label>
+                                    <input type="number" id="amount" name="amount" step="0.01" min="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="description">Description</label>
+                                    <input type="text" id="description" name="description" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="category">Category</label>
+                                    <select id="category" name="category" required>
+                                        <option value="salary">Salary</option>
+                                        <option value="food">Food</option>
+                                        <option value="transport">Transport</option>
+                                        <option value="utilities">Utilities</option>
+                                        <option value="entertainment">Entertainment</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="submit-btn">Add Transaction</button>
+                            </form>
+                        </div>
+                        
+                        <div class="transactions-list">
+                            <h3>Recent Transactions</h3>
+                            <div id="transactionsList">
+                                <!-- Transactions will be added here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settingsModal">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div class="setting-group">
+                <label for="apiKey">OpenAI API Key</label>
+                <input type="password" id="apiKey" placeholder="Enter your OpenAI API key">
+            </div>
+            <div class="setting-group">
+                <label for="model">Model</label>
+                <select id="model">
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    <option value="gpt-4">GPT-4</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label for="temperature">Temperature: <span id="temperatureValue">0.7</span></label>
+                <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7">
+            </div>
+            <div class="modal-buttons">
+                <button id="closeSettings">Cancel</button>
+                <button id="saveSettings">Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

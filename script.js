@@ -1,18 +1,14 @@
 // Firebase Configuration
-const firebaseConfig = {
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.FIREBASE_APP_ID,
-    measurementId: process.env.FIREBASE_MEASUREMENT_ID
-};
+const firebaseConfig = CONFIG.FIREBASE_CONFIG;
 
 // Initialize Firebase
 try {
-    firebase.initializeApp(firebaseConfig);
-    console.log("Firebase initialized successfully");
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log("Firebase initialized successfully");
+    } else {
+        console.log("Firebase already initialized");
+    }
 } catch (error) {
     console.error("Firebase initialization error:", error);
 }
@@ -24,13 +20,14 @@ const analytics = firebase.analytics();
 
 // Auth UI Elements
 const loginBtn = document.getElementById('loginBtn');
+const signUpBtn = document.getElementById('signUpBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const welcomeText = document.getElementById('welcome');
 
 // API Configuration
-const API_KEY = process.env.OPENAI_API_KEY;
+const API_KEY = CONFIG.OPENAI_API_KEY;
 if (!API_KEY) {
-    console.error('OpenAI API key not found. Please set OPENAI_API_KEY in your environment variables.');
+    console.error('OpenAI API key not found. Please set OPENAI_API_KEY in config.js');
 }
 const API_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -66,12 +63,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Validate settings
     validateSettings();
     
-    // Simple authentication check
+    // Initialize Firebase if enabled
     if (getSetting('data', 'useFirebase')) {
-        checkAuthStatus();
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                console.log("Firebase initialized successfully");
+            } else {
+                console.log("Firebase already initialized");
+            }
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+        }
+        
+        // Set up auth state listener
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                loadUserData();
+            } else {
+                currentUser = null;
+                clearUserData();
+            }
+        });
     } else {
         console.log("Firebase is disabled in settings");
-        // Set default user state
         currentUser = null;
         welcomeText.textContent = 'Not logged in';
         loginBtn.style.display = 'block';
@@ -80,18 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     loadSettings();
     setupAuthButtons();
-    
-    // Only load data if user is authenticated
-    firebase.auth().onAuthStateChanged((user) => {
-        if (user) {
-            currentUser = user;
-            loadUserData();
-        } else {
-            currentUser = null;
-            clearUserData();
-        }
-    });
-    
     loadTransactions();
     updateTransactionsList();
     updateFinanceSummary();
@@ -107,23 +111,160 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Simple authentication check
+// Setup auth buttons
+function setupAuthButtons() {
+    // Google Sign-in
+    loginBtn.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider)
+            .then((result) => {
+                console.log("Google sign-in successful:", result.user);
+                // Create or update user document in Firestore
+                return db.collection('users').doc(result.user.uid).set({
+                    email: result.user.email,
+                    displayName: result.user.displayName,
+                    photoURL: result.user.photoURL,
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            })
+            .then(() => {
+                checkAuthStatus();
+            })
+            .catch((error) => {
+                console.error("Google sign-in error:", error);
+                // If Google sign-in fails, show email/password form
+                createAuthForm('signin');
+            });
+    });
+
+    // Sign Up button
+    signUpBtn.addEventListener('click', () => {
+        createAuthForm('signup');
+    });
+
+    // Logout button
+    logoutBtn.addEventListener('click', () => {
+        auth.signOut()
+            .then(() => {
+                console.log("Logout successful");
+                checkAuthStatus();
+            })
+            .catch((error) => {
+                console.error("Logout error:", error);
+            });
+    });
+}
+
+function createAuthForm(type) {
+    const authSection = document.querySelector('.auth-section');
+    const existingForm = document.querySelector('.auth-form');
+    if (existingForm) {
+        authSection.removeChild(existingForm);
+    }
+
+    const authForm = document.createElement('div');
+    authForm.className = 'auth-form';
+    authForm.innerHTML = `
+        <h3>${type === 'signup' ? 'Create Account' : 'Sign In'}</h3>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="Enter your email" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+        <div class="form-buttons">
+            <button id="submitAuthBtn">${type === 'signup' ? 'Sign Up' : 'Sign In'}</button>
+            <button id="cancelAuthBtn">Cancel</button>
+        </div>
+    `;
+    
+    authSection.appendChild(authForm);
+    
+    document.getElementById('submitAuthBtn').addEventListener('click', () => {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        if (!email || !password) {
+            alert('Please enter both email and password');
+            return;
+        }
+        
+        if (type === 'signup') {
+            // Check password requirements
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters long');
+                return;
+            }
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((result) => {
+                    console.log("Sign up successful:", result.user);
+                    // Create user document in Firestore
+                    return db.collection('users').doc(result.user.uid).set({
+                        email: result.user.email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        settings: {
+                            theme: 'dark',
+                            notifications: true
+                        }
+                    });
+                })
+                .then(() => {
+                    authSection.removeChild(authForm);
+                    checkAuthStatus();
+                })
+                .catch((error) => {
+                    console.error("Sign up error:", error);
+                    alert(`Sign up failed: ${error.message}`);
+                });
+        } else {
+            auth.signInWithEmailAndPassword(email, password)
+                .then((result) => {
+                    console.log("Sign in successful:", result.user);
+                    authSection.removeChild(authForm);
+                    checkAuthStatus();
+                })
+                .catch((error) => {
+                    console.error("Sign in error:", error);
+                    alert(`Sign in failed: ${error.message}`);
+                });
+        }
+    });
+    
+    document.getElementById('cancelAuthBtn').addEventListener('click', () => {
+        authSection.removeChild(authForm);
+    });
+}
+
 function checkAuthStatus() {
-    const user = firebase.auth().currentUser;
+    const user = auth.currentUser;
     if (user) {
         console.log("User is signed in:", user.email);
-        currentUser = user;
         welcomeText.textContent = `Welcome, ${user.displayName || user.email}`;
         loginBtn.style.display = 'none';
+        signUpBtn.style.display = 'none';
         logoutBtn.style.display = 'block';
+        
+        // Load user data
+        loadUserData();
     } else {
         console.log("No user is signed in");
-        currentUser = null;
         welcomeText.textContent = 'Not logged in';
         loginBtn.style.display = 'block';
+        signUpBtn.style.display = 'block';
         logoutBtn.style.display = 'none';
+        
+        // Clear user data
+        clearUserData();
     }
 }
+
+// Initialize auth state listener
+auth.onAuthStateChanged((user) => {
+    checkAuthStatus();
+});
 
 // Mobile Sidebar Toggle
 sidebarToggle.addEventListener('click', (e) => {
@@ -155,103 +296,6 @@ function switchTab(tabId) {
         content.classList.remove('active');
         if (content.id === `${tabId}Tab`) {
             content.classList.add('active');
-        }
-    });
-}
-
-// Auth Functions
-function setupAuthButtons() {
-    loginBtn.addEventListener('click', () => {
-        console.log("Login button clicked");
-        
-        // Check if authentication is required
-        if (!getSetting('auth', 'requireAuth')) {
-            console.log("Authentication is not required");
-            // Set a default user
-            currentUser = { email: 'guest@example.com', displayName: 'Guest' };
-            welcomeText.textContent = `Welcome, ${currentUser.displayName}`;
-            loginBtn.style.display = 'none';
-            logoutBtn.style.display = 'block';
-            return;
-        }
-        
-        // Create a simple email/password login form
-        const loginForm = document.createElement('div');
-        loginForm.className = 'auth-form';
-        loginForm.innerHTML = `
-            <h3>Login</h3>
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" placeholder="Enter your email">
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Enter your password">
-            </div>
-            <div class="form-buttons">
-                <button id="emailLoginBtn">Login</button>
-                <button id="cancelLoginBtn">Cancel</button>
-            </div>
-        `;
-        
-        // Add form to the auth section
-        const authSection = document.querySelector('.auth-section');
-        authSection.appendChild(loginForm);
-        
-        // Add event listeners
-        document.getElementById('emailLoginBtn').addEventListener('click', () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            if (!email || !password) {
-                alert('Please enter both email and password');
-                return;
-            }
-            
-            // Check password requirements
-            const passwordReqs = getSetting('auth', 'passwordRequirements');
-            if (password.length < passwordReqs.minLength) {
-                alert(`Password must be at least ${passwordReqs.minLength} characters long`);
-                return;
-            }
-            
-            // Try email/password login
-            firebase.auth().signInWithEmailAndPassword(email, password)
-                .then((result) => {
-                    console.log("Login successful:", result.user);
-                    authSection.removeChild(loginForm);
-                    checkAuthStatus();
-                })
-                .catch((error) => {
-                    console.error('Login error:', error);
-                    alert(`Login failed: ${error.message}`);
-                });
-        });
-        
-        document.getElementById('cancelLoginBtn').addEventListener('click', () => {
-            authSection.removeChild(loginForm);
-        });
-    });
-
-    logoutBtn.addEventListener('click', () => {
-        console.log("Logout button clicked");
-        
-        // Check if Firebase is enabled
-        if (getSetting('data', 'useFirebase')) {
-            firebase.auth().signOut()
-                .then(() => {
-                    console.log('Logged out successfully');
-                    checkAuthStatus();
-                })
-                .catch((error) => {
-                    console.error('Logout error:', error);
-                });
-        } else {
-            // Simple logout without Firebase
-            currentUser = null;
-            welcomeText.textContent = 'Not logged in';
-            loginBtn.style.display = 'block';
-            logoutBtn.style.display = 'none';
         }
     });
 }
@@ -346,42 +390,57 @@ function addMessage(content, isUser = false) {
 
 async function handleSendMessage() {
     const message = inputField.value.trim();
-    if (message) {
-        addMessage(message, true);
-        inputField.value = '';
-        
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: modelSelect.value || 'gpt-3.5-turbo',
-                    messages: [
-                        { role: 'system', content: 'You are Esuvi, a helpful AI assistant.' },
-                        ...chatHistory.map(msg => ({
-                            role: msg.isUser ? 'user' : 'assistant',
-                            content: msg.content
-                        })),
-                        { role: 'user', content: message }
-                    ],
-                    temperature: parseFloat(temperatureInput.value) || 0.7
-                })
-            });
+    if (!message) return;
+    
+    // Add user message to chat
+    addMessage(message, true);
+    inputField.value = '';
+    
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    { role: 'system', content: 'You are Esuvi, a helpful AI assistant.' },
+                    ...chatHistory.map(msg => ({
+                        role: msg.isUser ? 'user' : 'assistant',
+                        content: msg.content
+                    })),
+                    { role: 'user', content: message }
+                ],
+                temperature: 0.7
+            })
+        });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const aiResponse = data.choices[0].message.content;
-            addMessage(aiResponse, false);
-        } catch (error) {
-            console.error('Error:', error);
-            addMessage('I apologize, but I encountered an error. Please check your API key and try again.', false);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+        addMessage(aiResponse, false);
+        
+        // Save to Firestore if user is authenticated
+        if (auth.currentUser) {
+            db.collection('users').doc(auth.currentUser.uid).collection('chatHistory').add({
+                content: message,
+                isUser: true,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            db.collection('users').doc(auth.currentUser.uid).collection('chatHistory').add({
+                content: aiResponse,
+                isUser: false,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        addMessage('I apologize, but I encountered an error. Please try again.', false);
     }
 }
 
@@ -403,13 +462,8 @@ function saveTransactions() {
 }
 
 function addTransaction(type, amount, description, category) {
-    if (!currentUser) {
+    if (!auth.currentUser) {
         alert('Please log in to add transactions');
-        return;
-    }
-
-    if (!type || !amount || !description || !category) {
-        console.error('Missing required transaction fields');
         return;
     }
 
@@ -421,8 +475,7 @@ function addTransaction(type, amount, description, category) {
         date: firebase.firestore.FieldValue.serverTimestamp()
     };
     
-    // Save to Firestore
-    db.collection('users').doc(currentUser.uid).collection('transactions').add(transaction)
+    db.collection('users').doc(auth.currentUser.uid).collection('transactions').add(transaction)
         .then(() => {
             transactions.unshift(transaction);
             updateTransactionsList();

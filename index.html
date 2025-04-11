@@ -3,16 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Esuvi</title>
+    <title>Esuvi eOS</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-analytics.js"></script>
     <!-- Application Settings -->
     <script src="settings.js"></script>
+    <!-- Error handling -->
+    <script>
+        window.onerror = function(msg, url, line) {
+            console.error('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + line);
+            return false;
+        };
+    </script>
 </head>
 <body>
     <div class="container">
@@ -33,10 +40,16 @@
                 </div>
                 <div class="auth-buttons">
                     <button id="loginBtn" class="auth-btn">
-                        <i class="fas fa-sign-in-alt"></i> Login
+                        <i class="fas fa-sign-in-alt"></i>
+                        Sign In
+                    </button>
+                    <button id="signUpBtn" class="auth-btn">
+                        <i class="fas fa-user-plus"></i>
+                        Sign Up
                     </button>
                     <button id="logoutBtn" class="auth-btn" style="display: none;">
-                        <i class="fas fa-sign-out-alt"></i> Logout
+                        <i class="fas fa-sign-out-alt"></i>
+                        Sign Out
                     </button>
                 </div>
             </div>
@@ -191,6 +204,8 @@
         </div>
     </div>
     
+    <!-- Scripts -->
+    <script src="config.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
